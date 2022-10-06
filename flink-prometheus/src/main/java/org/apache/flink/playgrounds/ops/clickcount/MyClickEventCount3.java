@@ -18,13 +18,12 @@
 package org.apache.flink.playgrounds.ops.clickcount;
 
 import org.apache.flink.api.java.utils.ParameterTool;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.playgrounds.ops.clickcount.functions.BackpressureMap;
 import org.apache.flink.playgrounds.ops.clickcount.functions.ClickEventStatisticsCollector;
 import org.apache.flink.playgrounds.ops.clickcount.functions.CountingAggregator;
 import org.apache.flink.playgrounds.ops.clickcount.records.ClickEvent;
-import org.apache.flink.playgrounds.ops.clickcount.records.ClickEventDeserializationSchema;
 import org.apache.flink.playgrounds.ops.clickcount.records.ClickEventStatistics;
-import org.apache.flink.playgrounds.ops.clickcount.records.ClickEventStatisticsSerializationSchema;
 import org.apache.flink.playgrounds.ops.clickcount.sink.KafkaMockSink;
 import org.apache.flink.playgrounds.ops.clickcount.source.KafkaMockSource;
 import org.apache.flink.streaming.api.TimeCharacteristic;
@@ -32,12 +31,7 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor;
 import org.apache.flink.streaming.api.windowing.time.Time;
-import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
-import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.producer.ProducerConfig;
 
-import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -57,8 +51,9 @@ import java.util.concurrent.TimeUnit;
  *
  * 功能：从模拟数据源输入数据，然后进行窗口统计输出。
  * 注：只测试背压，算子链相关事项，如果要测试exactly-once，请使用 ClickEventGenerator 生成数据，ClickEventCount 计算
+ * metrics.reporter.promgateway.xxx 相关配置配在当前作业的代码中
  */
-public class MyClickEventCount {
+public class MyClickEventCount3 {
 
 	public static final String CHECKPOINTING_OPTION = "checkpointing";
 	public static final String CHECKPOINT_INTERVAL_MILLS = "checkpoint.interval.mills";
@@ -71,8 +66,8 @@ public class MyClickEventCount {
 
 	public static void main(String[] args) throws Exception {
 		final ParameterTool params = ParameterTool.fromArgs(args);
-
-		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+		Configuration configuration = initPrometheusConfig();
+		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(configuration);
 
 		configureEnvironment(params, env);
 
@@ -130,5 +125,29 @@ public class MyClickEventCount {
 			//disabling Operator chaining to make it easier to follow the Job in the WebUI
 			env.disableOperatorChaining();
 		}
+	}
+
+	/**
+	 * ##### 与Prometheus集成配置 #####
+	 * metrics.reporter.promgateway.class: org.apache.flink.metrics.prometheus.PrometheusPushGatewayReporter
+	 * # PushGateway的主机名与端口号
+	 * metrics.reporter.promgateway.host: hadoop01
+	 * metrics.reporter.promgateway.port: 9091
+	 * # Flink metric在前端展示的标签（前缀）与随机后缀
+	 * metrics.reporter.promgateway.jobName: flink-metrics
+	 * metrics.reporter.promgateway.randomJobNameSuffix: true
+	 * metrics.reporter.promgateway.deleteOnShutdown: true
+	 * metrics.reporter.promgateway.interval: 30 SECONDS
+	 */
+	private static Configuration initPrometheusConfig(){
+		Configuration configuration = new Configuration();
+		configuration.setString("metrics.reporter.promgateway.class","org.apache.flink.metrics.prometheus.PrometheusPushGatewayReporter");
+		configuration.setString("metrics.reporter.promgateway.host","hadoop01");
+		configuration.setString("metrics.reporter.promgateway.port","9091");
+		configuration.setString("metrics.reporter.promgateway.jobName","flink-metrics");
+		configuration.setString("metrics.reporter.promgateway.randomJobNameSuffix","true");
+		configuration.setString("metrics.reporter.promgateway.deleteOnShutdown","true");
+		configuration.setString("metrics.reporter.promgateway.interval","30 SECONDS");
+		return configuration;
 	}
 }
