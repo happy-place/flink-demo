@@ -32,6 +32,7 @@ public class ClickEvent {
 	@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd-MM-yyyy hh:mm:ss:SSS")
 	private Date timestamp;
 	private String page;
+	private String type;
 
 	public ClickEvent() {
 	}
@@ -39,6 +40,12 @@ public class ClickEvent {
 	public ClickEvent(final Date timestamp, final String page) {
 		this.timestamp = timestamp;
 		this.page = page;
+	}
+
+	public ClickEvent(Date timestamp, String page, String type) {
+		this.timestamp = timestamp;
+		this.page = page;
+		this.type = type;
 	}
 
 	public Date getTimestamp() {
@@ -55,6 +62,14 @@ public class ClickEvent {
 
 	public void setPage(final String page) {
 		this.page = page;
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
 	}
 
 	@Override
@@ -79,6 +94,7 @@ public class ClickEvent {
 		final StringBuilder sb = new StringBuilder("ClickEvent{");
 		sb.append("timestamp=").append(timestamp);
 		sb.append(", page='").append(page).append('\'');
+		sb.append(", type='").append(type).append('\'');
 		sb.append('}');
 		return sb.toString();
 	}
